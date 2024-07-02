@@ -1,9 +1,10 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import React from 'react';
+import { Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography } from '@mui/material';
+import { Dayjs } from 'dayjs';
+import moment from 'moment';
 
-// Define the interface for the inventory calendar item
 interface InventoryCalendarItem {
   id: string;
   date: string;
@@ -12,7 +13,6 @@ interface InventoryCalendarItem {
   booked: number;
 }
 
-// Define the interface for the rate plan calendar item
 interface RatePlanCalendarItem {
   id: string;
   date: string;
@@ -21,14 +21,12 @@ interface RatePlanCalendarItem {
   reservation_deadline: number | null;
 }
 
-// Define the interface for the rate plan
 interface RatePlan {
   id: number;
   name: string;
   calendar: RatePlanCalendarItem[];
 }
 
-// Define the interface for the room
 interface Room {
   id: string;
   name: string;
@@ -37,59 +35,78 @@ interface Room {
   rate_plans: RatePlan[];
 }
 
-// Define the interface for the entire JSON response
 interface RoomCalendarResponse {
   code: string;
   message: string;
   data: Room[];
 }
 
-const RoomCalendar = () => {
+interface RoomCalendarProps {
+  startDate: Dayjs | null;
+  endDate: Dayjs | null;
+}
+
+const RoomCalendar: React.FC<RoomCalendarProps> = ({ startDate, endDate }) => {
   const [roomData, setRoomData] = useState<Room[]>([]);
   const [dates, setDates] = useState<string[]>([]);
 
-  useEffect(() => {
-    // Fetch the data from the API
-    const fetchData = async () => {
-      try {
-        const response = await axios.get<RoomCalendarResponse>('https://api.bytebeds.com/api/v1/property/1/room/rate-calendar/assessment?start_date=2024-05-01&end_date=2024-05-15');
-        setRoomData(response.data.data);
+  useEffect(()=> {
+    if (startDate && endDate) {
+      
+      const fetchData = async () => {
+        try {
+          const response = await axios.get<RoomCalendarResponse>(
+            `https://api.bytebeds.com/api/v1/property/1/room/rate-calendar/assessment?start_date=${startDate.format('YYYY-MM-DD')}&end_date=${endDate.format('YYYY-MM-DD')}`
+          );
+          setRoomData(response.data.data);
 
-        // Extract the unique dates from the inventory calendar
-        const allDates = response.data.data
-          .flatMap(room => room.inventory_calendar.map(inv => inv.date))
-          .filter((value, index, self) => self.indexOf(value) === index);
-        setDates(allDates);
-      } catch (error) {
-        console.error('Error fetching room calendar data:', error);
-      }
-    };
 
-    fetchData();
-  }, []);
+          const allDates = response.data.data
+            .flatMap(room => room.inventory_calendar.map(inv => inv.date))
+            .filter((value, index, self) => self.indexOf(value) === index);
+          setDates(allDates);
+         console.log(allDates)
+          
+        } catch (error) {
+          console.error('Error fetching room calendar data:', error);
+        }
+      };
+
+      fetchData();
+    }
+  }, [startDate, endDate]);
+
+  if (!startDate || !endDate) {
+    return (
+      <Container className="mb-5">
+        <Typography variant="h6" align="center">
+          Please select a date range to view the calendar.
+        </Typography>
+      </Container>
+    );
+  }
 
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        Room Calendar
-      </Typography>
+    <Container className='mb-5'>
       <TableContainer component={Paper}>
         <Table className='p-5'>
           <TableHead>
             <TableRow>
-              <TableCell>Room</TableCell>
+              <TableCell></TableCell>
               {dates.map(date => (
-                <TableCell key={date} align="center">{new Date(date).toLocaleDateString()}</TableCell>
+                <TableCell key={date} align="center">{moment(date).format("L")}</TableCell>
               ))}
             </TableRow>
           </TableHead>
-
           <TableBody>
             {roomData.map(room => (
               <React.Fragment key={room.id}>
-             <Typography variant="h6" >{room.name}</Typography>
+       
+                  <h1 className='font-bold text-[20px] px-5 py-4 whitespace-nowrap'>{room.name}</h1>
+           
+             
                 <TableRow>
-                <TableCell>Rooms Status </TableCell>
+                  <TableCell>Rooms Status</TableCell>
                   {dates.map(date => {
                     const inventory = room.inventory_calendar.find(inv => inv.date === date);
                     return (
@@ -106,27 +123,49 @@ const RoomCalendar = () => {
                     return <TableCell key={date} align="center">{inventory ? inventory.available : '-'}</TableCell>;
                   })}
                 </TableRow>
-                
                 <TableRow>
                   <TableCell>Net booked</TableCell>
                   {dates.map(date => {
                     const inventory = room.inventory_calendar.find(inv => inv.date === date);
-                    return <TableCell key={date} align="center">{inventory ? inventory.booked : '-'}</TableCell>;
+                    return <TableCell key={date} align="center">{inventory ? inventory.booked : 0}</TableCell>;
                   })}
                 </TableRow>
-
                 {room.rate_plans.map(ratePlan => (
-                  <TableRow key={ratePlan.id}>
-                    <TableCell>{ratePlan.name}</TableCell>
-                    {dates.map(date => {
-                      const rate = ratePlan.calendar.find(rate => rate.date === date);
-                      return (
-                        <TableCell key={date} align="center">
-                          {rate ? `${rate.rate}` : '-'}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                  <React.Fragment key={ratePlan.id}>
+                    <TableRow>
+                      <TableCell>{ratePlan.name} Rate</TableCell>
+                      {dates.map(date => {
+                        const rate = ratePlan.calendar.find(rate => rate.date === date);
+                        return (
+                          <TableCell key={date} align="center">
+                            {rate ? `$${rate.rate}` : 'null'}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    <TableRow>
+                      <TableCell> Min Length of Stay</TableCell>
+                      {dates.map(date => {
+                        const rate = ratePlan.calendar.find(rate => rate.date === date);
+                        return (
+                          <TableCell key={date} align="center">
+                            {rate && rate.min_length_of_stay !== null ? rate.min_length_of_stay : 'null'}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    <TableRow>
+                      <TableCell> Reservation Deadline</TableCell>
+                      {dates.map(date => {
+                        const rate = ratePlan.calendar.find(rate => rate.date === date);
+                        return (
+                          <TableCell key={date} align="center">
+                            {rate && rate.reservation_deadline !== null ? rate.reservation_deadline : 'null'}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  </React.Fragment>
                 ))}
               </React.Fragment>
             ))}

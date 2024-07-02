@@ -3,18 +3,30 @@ import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import React from 'react';
 
-const DateRanger = () => {
-    const [value, setValue] = React.useState<Dayjs | null>(dayjs('2024-04-17'));
-  return (
-    <DemoContainer components={['DatePicker', 'DatePicker']}>
-    <DatePicker label="Start" defaultValue={dayjs('2024-06-17')} />
-    <DatePicker
-      label="End"
-      value={value}
-      onChange={(newValue) => setValue(newValue)}
-    />
-  </DemoContainer>
-  )
+interface DateRangerProps {
+  startDate: Dayjs | null;
+  endDate: Dayjs | null;
+  onStartDateChange: (date: Dayjs | null) => void;
+  onEndDateChange: (date: Dayjs | null) => void;
 }
 
-export default DateRanger
+const DateRanger: React.FC<DateRangerProps> = ({ startDate, endDate, onStartDateChange, onEndDateChange }) => {
+  return (
+    <div className='mb-5 p-5'>
+      <DemoContainer components={['DatePicker', 'DatePicker']}>
+        <DatePicker
+          label="Start"
+          value={startDate}
+          onChange={onStartDateChange}
+        />
+        <DatePicker
+          label="End"
+          value={endDate}
+          onChange={onEndDateChange}
+        />
+      </DemoContainer>
+    </div>
+  );
+};
+
+export default DateRanger;
